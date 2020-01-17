@@ -1,0 +1,5 @@
+cell phone
+keyboard
+laptop
+mouse
+person
