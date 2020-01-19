@@ -74,7 +74,8 @@ int main( int argc, char* argv[] )
         std::vector<cv::Mat> detections;
         net.forward( detections, getOutputsNames( net ) );
 
-        // Draw Region
+        // Get Object Bounding-Boxes, Confidences, and Class-Indices
+        std::vector<int32_t> class_ids, std::vector<float> confidences, std::vector<cv::Rect> rectangles;
         const std::vector<float> anchors = { 0.573f, 0.677f, 1.87f, 2.06f, 3.34f, 5.47f, 7.88f, 3.53f, 9.77f, 9.17f };
         for( cv::Mat& detection : detections ){
             const int32_t num_anchor = anchors.size() / 2;
@@ -114,6 +115,7 @@ int main( int argc, char* argv[] )
                             class_probabilities[j] *= objectness / sum;
                         }
 
+                        const cv::Rect rectangle = cv::Rect( static_cast<int32_t>( x * frame.cols ), static_cast<int32_t>( y * frame.rows ), static_cast<int32_t>( w * frame.cols ), static_cast<int32_t>( h * frame.rows ) );
                         const std::vector<float>::iterator confidence = std::max_element( class_probabilities.begin(), class_probabilities.end() );
                         const int32_t class_id = std::distance( class_probabilities.begin(), confidence );
 
@@ -122,17 +124,26 @@ int main( int argc, char* argv[] )
                             continue;
                         }
 
-                        const cv::Rect rectangle = cv::Rect(
-                            static_cast<int32_t>( x * frame.cols ),
-                            static_cast<int32_t>( y * frame.rows ),
-                            static_cast<int32_t>( w * frame.cols ),
-                            static_cast<int32_t>( h * frame.rows ) );
-                        const cv::Scalar color = colors[class_id];
-                        constexpr int32_t thickness = 3;
-                        cv::rectangle( frame, rectangle, color, thickness );
+                        class_ids.push_back( class_id );
+                        confidences.push_back( *confidence );
+                        rectangles.push_back( rectangle );
                     }
                 }
             }
+        }
+
+        // Remove Overlap Bounding-Boxes using Non-Maximum Suppression
+        constexpr float confidence_threshold = 0.5; // Confidence
+        constexpr float nms_threshold = 0.5; // IoU (Intersection over Union)
+        std::vector<int32_t> indices;
+        cv::dnn::NMSBoxes( rectangles, confidences, confidence_threshold, nms_threshold, indices );
+
+        // Draw Bounding-Boxes
+        for( const int32_t& index : indices ){
+            const cv::Rect rectangle = rectangles[index];
+            const cv::Scalar color = colors[class_ids[index]];
+            constexpr int32_t thickness = 3;
+            cv::rectangle( frame, rectangle, color, thickness );
         }
 
         // Show Image
