@@ -75,7 +75,7 @@ int main( int argc, char* argv[] )
         net.forward( detections, getOutputsNames( net ) );
 
         // Get Object Bounding-Boxes, Confidences, and Class-Indices
-        std::vector<int32_t> class_ids, std::vector<float> confidences, std::vector<cv::Rect> rectangles;
+        std::vector<int32_t> class_ids; std::vector<float> confidences; std::vector<cv::Rect> rectangles;
         const std::vector<float> anchors = { 0.573f, 0.677f, 1.87f, 2.06f, 3.34f, 5.47f, 7.88f, 3.53f, 9.77f, 9.17f };
         for( cv::Mat& detection : detections ){
             const int32_t num_anchor = anchors.size() / 2;
